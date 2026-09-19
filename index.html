@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -45,6 +44,19 @@
       word-break: break-word;
     }
 
+    #avvia {
+      display: none;
+      margin: 20px auto;
+      padding: 18px 25px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
     #ritorno {
       display: none;
       margin-top: 20px;
@@ -68,8 +80,17 @@
       text-align: left;
       word-break: break-all;
     }
-  </style>
 
+    .errore {
+      background: #ffebee !important;
+      color: #b71c1c;
+    }
+
+    .ok {
+      background: #e8f5e9 !important;
+      color: #1b5e20;
+    }
+  </style>
 </head>
 
 <body>
@@ -82,10 +103,14 @@
 
   <p>Inquadra il QR code del voucher.</p>
 
+  <button id="avvia" onclick="richiediFotocamera()">
+    📷 ATTIVA FOTOCAMERA
+  </button>
+
   <div id="reader"></div>
 
   <div id="risultato">
-    Avvio fotocamera...
+    Preparazione fotocamera...
   </div>
 
   <div id="indirizzo"></div>
@@ -99,7 +124,7 @@
 <script>
 
   // =====================================================
-  // LEGGE IL PARAMETRO "ritorno"
+  // PARAMETRO RITORNO
   // =====================================================
 
   const parametri =
@@ -108,35 +133,150 @@
   const ritorno =
     parametri.get("ritorno");
 
+  let scanner = null;
   let giaLetto = false;
+  let fotocameraAvviata = false;
 
 
   // =====================================================
-  // CONTROLLO
+  // AVVIO
   // =====================================================
 
-  if (!ritorno) {
+  window.addEventListener("load", function() {
+
+    if (!ritorno) {
+
+      mostraErrore(
+        "Manca il collegamento allo stand."
+      );
+
+      return;
+    }
+
+    // Controllo browser
+    if (!navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia) {
+
+      mostraErrore(
+        "Il browser non permette l'accesso alla fotocamera."
+      );
+
+      return;
+    }
+
+    // Mostriamo il pulsante.
+    // Questo permette all'utente di dare
+    // esplicitamente il consenso alla fotocamera.
+
+    document.getElementById("avvia").style.display =
+      "inline-block";
 
     document.getElementById("risultato").innerHTML =
-      "<strong>ERRORE</strong><br><br>" +
-      "Manca il collegamento allo stand.";
+      "Premi <strong>ATTIVA FOTOCAMERA</strong> per iniziare.";
+  });
 
-  } else {
 
-    avviaScanner();
+  // =====================================================
+  // RICHIESTA PERMESSO FOTOCAMERA
+  // =====================================================
 
+  async function richiediFotocamera() {
+
+    const risultato =
+      document.getElementById("risultato");
+
+    const pulsante =
+      document.getElementById("avvia");
+
+    pulsante.disabled = true;
+
+    risultato.className = "";
+
+    risultato.innerHTML =
+      "📷 Richiesta accesso alla fotocamera...";
+
+    try {
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: {
+              ideal: "environment"
+            }
+          },
+          audio: false
+        });
+
+      // Abbiamo ottenuto il permesso.
+      // Chiudiamo immediatamente questo stream:
+      // Html5Qrcode ne aprirà uno proprio.
+
+      stream.getTracks().forEach(function(track) {
+        track.stop();
+      });
+
+      fotocameraAvviata = true;
+
+      pulsante.style.display = "none";
+
+      risultato.innerHTML =
+        "📷 Fotocamera attiva.<br>" +
+        "Inquadra il QR del voucher.";
+
+      avviaScanner();
+
+    } catch (errore) {
+
+      console.error(errore);
+
+      pulsante.disabled = false;
+      pulsante.style.display = "inline-block";
+
+      let messaggio =
+        "Impossibile accedere alla fotocamera.";
+
+      if (errore && errore.name === "NotAllowedError") {
+
+        messaggio =
+          "❌ Permesso fotocamera negato.<br><br>" +
+          "Consenti l'accesso alla fotocamera nelle " +
+          "impostazioni del browser e riprova.";
+
+      } else if (errore && errore.name === "NotFoundError") {
+
+        messaggio =
+          "❌ Nessuna fotocamera trovata sul dispositivo.";
+
+      } else if (errore && errore.name === "NotReadableError") {
+
+        messaggio =
+          "❌ La fotocamera è già utilizzata da un'altra app.";
+
+      } else if (errore && errore.name === "SecurityError") {
+
+        messaggio =
+          "❌ Il browser ha bloccato l'accesso alla fotocamera.";
+
+      }
+
+      risultato.className = "errore";
+      risultato.innerHTML = messaggio;
+    }
   }
 
 
   // =====================================================
-  // SCANNER
+  // AVVIO LETTORE QR
   // =====================================================
 
   function avviaScanner() {
 
-    const scanner =
-      new Html5Qrcode("reader");
+    if (scanner !== null) {
+      return;
+    }
 
+    scanner =
+      new Html5Qrcode("reader");
 
     scanner.start(
 
@@ -150,13 +290,10 @@
         qrbox: {
           width: 250,
           height: 250
-        }
+        },
+
+        aspectRatio: 1.0
       },
-
-
-      // =================================================
-      // QR RILEVATO
-      // =================================================
 
       function(codice) {
 
@@ -166,20 +303,28 @@
 
         giaLetto = true;
 
+        // Ferma fotocamera
+        if (scanner) {
 
-        // Ferma la fotocamera
-        scanner.stop().catch(function() {});
+          scanner.stop()
+            .then(function() {
+
+              scanner.clear();
+
+            })
+            .catch(function() {});
+
+        }
 
 
         // =================================================
-        // CREA URL CORRETTO
+        // COSTRUZIONE URL DI RITORNO
         // =================================================
 
         const separatore =
           ritorno.indexOf("?") >= 0
             ? "&"
             : "?";
-
 
         const url =
           ritorno +
@@ -189,10 +334,15 @@
 
 
         // =================================================
-        // MOSTRA RISULTATO
+        // RISULTATO
         // =================================================
 
-        document.getElementById("risultato").innerHTML =
+        const risultato =
+          document.getElementById("risultato");
+
+        risultato.className = "ok";
+
+        risultato.innerHTML =
           "<strong>✅ QR LETTO</strong><br><br>" +
           "Codice voucher:<br>" +
           "<strong>" +
@@ -202,7 +352,7 @@
 
 
         // =================================================
-        // MOSTRA URL GENERATO
+        // MOSTRA URL
         // =================================================
 
         const indirizzo =
@@ -216,36 +366,48 @@
 
 
         // =================================================
-        // PULSANTE
+        // PULSANTE RITORNO
         // =================================================
 
         const link =
           document.getElementById("ritorno");
 
         link.href = url;
-
         link.style.display = "block";
-
       },
 
-
-      // Errori normali di scansione
-      function(error) {}
+      function(errorMessage) {
+        // Errori normali mentre cerca il QR.
+        // Non mostriamo nulla per evitare messaggi continui.
+      }
 
     ).catch(function(error) {
 
-      document.getElementById("risultato").innerHTML =
-        "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
-        "Impossibile accedere alla fotocamera.<br><br>" +
-        "Controlla i permessi della fotocamera.";
+      console.error(error);
+
+      const risultato =
+        document.getElementById("risultato");
+
+      risultato.className = "errore";
+
+      risultato.innerHTML =
+        "<strong>❌ ERRORE FOTOCAMERA</strong><br><br>" +
+        "La fotocamera non può essere avviata.<br><br>" +
+        "Controlla che il browser abbia il permesso " +
+        "di utilizzare la fotocamera.";
+
+      const pulsante =
+        document.getElementById("avvia");
+
+      pulsante.disabled = false;
+      pulsante.style.display = "inline-block";
 
     });
-
   }
 
 
   // =====================================================
-  // SICUREZZA TESTO
+  // ESCAPE HTML
   // =====================================================
 
   function escapeHtml(testo) {
@@ -256,7 +418,23 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
 
+
+  // =====================================================
+  // ERRORE
+  // =====================================================
+
+  function mostraErrore(testo) {
+
+    const risultato =
+      document.getElementById("risultato");
+
+    risultato.className = "errore";
+
+    risultato.innerHTML =
+      "<strong>❌ ERRORE</strong><br><br>" +
+      testo;
   }
 
 </script>
