@@ -4,41 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Festival del Gusto - Scanner QR</title>
+  <title>Festival del Gusto - Scanner</title>
 
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
       padding: 20px;
       font-family: Arial, sans-serif;
       background: #f4f4f4;
-      color: #222;
       text-align: center;
     }
 
     .box {
       max-width: 600px;
-      margin: 0 auto;
-      background: white;
+      margin: auto;
       padding: 20px;
+      background: white;
       border-radius: 15px;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.15);
+      box-shadow: 0 3px 15px rgba(0,0,0,.15);
     }
 
     h1 {
       margin-top: 0;
-      font-size: 28px;
-    }
-
-    h2 {
-      font-size: 21px;
-      margin-bottom: 10px;
     }
 
     #reader {
@@ -49,40 +38,22 @@
 
     #risultato {
       margin-top: 20px;
-      padding: 18px;
+      padding: 20px;
       border-radius: 10px;
-      background: #f1f1f1;
-      font-size: 17px;
+      background: #eee;
       word-break: break-word;
     }
 
-    #pulsante {
+    #ritorno {
       display: none;
-      width: 100%;
       margin-top: 20px;
       padding: 18px;
-      font-size: 19px;
-      font-weight: bold;
-      border: 0;
-      border-radius: 10px;
       background: #1976d2;
       color: white;
-      cursor: pointer;
-    }
-
-    #pulsante:active {
-      transform: scale(0.98);
-    }
-
-    #debug {
-      display: none;
-      margin-top: 20px;
-      padding: 12px;
-      background: #fff3cd;
-      border-radius: 8px;
-      text-align: left;
-      font-size: 12px;
-      word-break: break-all;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -93,7 +64,7 @@
 
   <h1>Festival del Gusto</h1>
 
-  <h2>Scansione QR Code</h2>
+  <h2>Scanner QR</h2>
 
   <p>Inquadra il QR code del voucher.</p>
 
@@ -103,96 +74,39 @@
     Avvio fotocamera...
   </div>
 
-  <button id="pulsante">
+  <a id="ritorno" href="#">
     TORNA ALLO STAND
-  </button>
-
-  <div id="debug"></div>
+  </a>
 
 </div>
 
-
 <script>
 
-  // ==========================================
-  // PARAMETRI
-  // ==========================================
-
-  const params =
+  // URL dello stand ricevuto dal link
+  const parametri =
     new URLSearchParams(window.location.search);
 
   const ritorno =
-    params.get("ritorno") || "";
+    parametri.get("ritorno");
 
   let giaLetto = false;
 
-  let urlRitorno = "";
 
-
-  // ==========================================
-  // CREA URL DI RITORNO
-  // ==========================================
-
-  function creaUrlRitorno(decodedText) {
-
-    if (!ritorno) {
-      return "";
-    }
-
-    let url = ritorno;
-
-    const separatore =
-      url.indexOf("?") >= 0
-        ? "&"
-        : "?";
-
-    url =
-      url +
-      separatore +
-      "qr=" +
-      encodeURIComponent(decodedText);
-
-    return url;
-  }
-
-
-  // ==========================================
-  // TORNA ALLO STAND
-  // ==========================================
-
-  function tornaAlloStand() {
-
-    if (!urlRitorno) {
-
-      alert("URL di ritorno mancante.");
-
-      return;
-    }
+  // Controllo URL
+  if (!ritorno) {
 
     document.getElementById("risultato").innerHTML =
-      "<strong>Ritorno allo stand...</strong><br><br>" +
-      "Attendere...";
+      "<strong>ERRORE</strong><br><br>" +
+      "Manca il collegamento allo stand.";
 
-    // Usiamo direttamente la navigazione del browser.
-    window.location.href = urlRitorno;
+  } else {
+
+    avviaScanner();
+
   }
 
 
-  // ==========================================
-  // AVVIA SCANNER
-  // ==========================================
-
   function avviaScanner() {
-
-    if (!ritorno) {
-
-      document.getElementById("risultato").innerHTML =
-        "<strong>ERRORE</strong><br><br>" +
-        "URL di ritorno mancante.";
-
-      return;
-    }
-
 
     const scanner =
       new Html5Qrcode("reader");
@@ -206,7 +120,6 @@
 
       {
         fps: 10,
-
         qrbox: {
           width: 250,
           height: 250
@@ -214,11 +127,9 @@
       },
 
 
-      function(decodedText) {
+      function(codice) {
 
-        // Evita che il QR venga letto
-        // più volte consecutivamente.
-
+        // Evita letture ripetute
         if (giaLetto) {
           return;
         }
@@ -226,98 +137,74 @@
         giaLetto = true;
 
 
-        // ======================================
-        // COSTRUISCE IL LINK
-        // ======================================
+        // =====================================
+        // CREA URL DELLO STAND
+        // =====================================
 
-        urlRitorno =
-          creaUrlRitorno(decodedText);
-
-
-        // ======================================
-        // NASCONDE LO SCANNER
-        // SENZA FERMARLO
-        // ======================================
-
-        document.getElementById("reader").style.display =
-          "none";
+        const separatore =
+          ritorno.indexOf("?") >= 0
+            ? "&"
+            : "?";
 
 
-        // ======================================
-        // MOSTRA QR RICONOSCIUTO
-        // ======================================
+        const url =
+          ritorno +
+          separatore +
+          "qr=" +
+          encodeURIComponent(codice);
+
+
+        // =====================================
+        // MOSTRA RISULTATO
+        // =====================================
 
         document.getElementById("risultato").innerHTML =
           "<strong>✅ VOUCHER RICONOSCIUTO</strong><br><br>" +
-          "Codice voucher:<br><br>" +
+          "Codice:<br>" +
           "<strong>" +
-          decodedText +
+          codice +
           "</strong><br><br>" +
-          "Premi il pulsante per tornare allo stand.";
+          "Il voucher è stato letto correttamente.";
 
 
-        // ======================================
-        // MOSTRA PULSANTE
-        // ======================================
+        // =====================================
+        // CREA LINK NORMALE
+        // =====================================
 
-        const pulsante =
-          document.getElementById("pulsante");
-
-        pulsante.style.display =
-          "block";
+        const link =
+          document.getElementById("ritorno");
 
 
-        pulsante.onclick =
-          tornaAlloStand;
+        link.href = url;
+
+        link.style.display = "block";
 
 
-        // ======================================
-        // MOSTRA URL GENERATO
-        // ======================================
-
-        const debug =
-          document.getElementById("debug");
-
-        debug.style.display =
-          "block";
-
-        debug.innerHTML =
-          "<strong>URL generato:</strong><br><br>" +
-          urlRitorno;
+        // NON facciamo:
+        // scanner.stop()
+        // window.location
+        // window.open
+        //
+        // Il browser deve semplicemente
+        // mostrare il link.
 
       },
 
 
-      function(errorMessage) {
+      function(error) {
 
-        // Errori normali durante la ricerca
-        // del QR: non facciamo nulla.
-
+        // Ignoriamo gli errori di scansione
       }
 
-    )
-
-    .catch(function(error) {
+    ).catch(function(error) {
 
       document.getElementById("risultato").innerHTML =
-        "<strong>❌ ERRORE FOTOCAMERA</strong><br><br>" +
-        "Controlla di aver autorizzato " +
-        "l'accesso alla fotocamera.";
+        "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
+        "Impossibile accedere alla fotocamera.";
 
     });
 
   }
-
-
-  // ==========================================
-  // AVVIO
-  // ==========================================
-
-  window.onload = function() {
-
-    avviaScanner();
-
-  };
 
 </script>
 
