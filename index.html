@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -53,104 +54,216 @@
       cursor: pointer;
     }
   </style>
+
 </head>
 
 <body>
 
   <div class="box">
 
-    <h1>Festival del Gusto</h1>
+```
+<h1>Festival del Gusto</h1>
 
-    <h2>Scansione QR Code</h2>
+<h2>Scansione QR Code</h2>
 
-    <p>
-      Inquadra il QR code del voucher.
-    </p>
+<p>
+  Inquadra il QR code del voucher.
+</p>
 
-    <div id="reader"></div>
+<div id="reader"></div>
 
-    <div id="risultato"></div>
+<div id="risultato"></div>
+```
 
   </div>
 
 <script>
 
+  /*
+   * Recuperiamo il parametro "ritorno"
+   * passato dalla pagina dello stand.
+   *
+   * Esempio:
+   * https://script.google.com/.../exec?stand=S_12345
+   */
+
   const params = new URLSearchParams(window.location.search);
 
-  const idStand = params.get("stand") || "";
   const ritorno = params.get("ritorno") || "";
 
-  let scanner;
+  let scanner = null;
+  let giaLetto = false;
+
+
+  /*
+   * Costruisce correttamente l'URL di ritorno.
+   *
+   * IMPORTANTE:
+   * ritorno contiene già ?stand=...
+   * quindi NON dobbiamo aggiungere un altro ?stand.
+   */
+
+  function creaUrlRitorno(decodedText) {
+
+    if (!ritorno) {
+      return "";
+    }
+
+    let url = ritorno;
+
+    /*
+     * Se l'URL contiene già "?"
+     * aggiungiamo "&qr=".
+     *
+     * Altrimenti aggiungiamo "?qr=".
+     */
+
+    const separatore =
+      url.indexOf("?") >= 0
+        ? "&"
+        : "?";
+
+    url =
+      url +
+      separatore +
+      "qr=" +
+      encodeURIComponent(decodedText);
+
+    return url;
+  }
+
+
+  /*
+   * Avvio scanner
+   */
 
   function avviaScanner() {
 
-    scanner = new Html5Qrcode("reader");
+    scanner =
+      new Html5Qrcode("reader");
+
 
     scanner.start(
-      { facingMode: "environment" },
+
+      {
+        facingMode: "environment"
+      },
 
       {
         fps: 10,
+
         qrbox: {
           width: 250,
           height: 250
         }
       },
 
+
       function(decodedText) {
 
-        scanner.stop().then(function() {
+        /*
+         * Evita che lo stesso QR venga
+         * elaborato più volte.
+         */
+
+        if (giaLetto) {
+          return;
+        }
+
+        giaLetto = true;
+
+
+        document.getElementById("risultato").innerHTML =
+          "✅ QR riconosciuto.<br><br>" +
+          "Ritorno allo stand...";
+
+
+        /*
+         * Creiamo subito l'URL corretto.
+         */
+
+        const urlRitorno =
+          creaUrlRitorno(decodedText);
+
+
+        /*
+         * Se non abbiamo un URL di ritorno,
+         * mostriamo l'errore.
+         */
+
+        if (!urlRitorno) {
 
           document.getElementById("risultato").innerHTML =
-            "QR letto: " + decodedText;
+            "❌ Errore: manca il collegamento di ritorno allo stand.";
 
-          if (ritorno) {
+          giaLetto = false;
 
-            const url =
-              ritorno +
-              "?stand=" +
-              encodeURIComponent(idStand) +
-              "&qr=" +
-              encodeURIComponent(decodedText);
+          return;
+        }
 
-            window.location.href = url;
 
-          }
+        /*
+         * Fermiamo la fotocamera prima
+         * di tornare alla pagina dello stand.
+         */
 
-        }).catch(function() {
+        scanner.stop()
 
-          if (ritorno) {
+          .then(function() {
 
-            const url =
-              ritorno +
-              "?stand=" +
-              encodeURIComponent(idStand) +
-              "&qr=" +
-              encodeURIComponent(decodedText);
+            window.location.href =
+              urlRitorno;
 
-            window.location.href = url;
+          })
 
-          }
+          .catch(function() {
 
-        });
+            /*
+             * Anche se la fotocamera non si
+             * ferma correttamente, torniamo
+             * comunque allo stand.
+             */
+
+            window.location.href =
+              urlRitorno;
+
+          });
 
       },
 
+
       function(errorMessage) {
-        // Nessun problema: continua a cercare il QR.
+
+        /*
+         * Nessun errore da mostrare:
+         * lo scanner continua a cercare il QR.
+         */
+
       }
 
-    ).catch(function(error) {
+    )
+
+    .catch(function(error) {
+
+      giaLetto = false;
 
       document.getElementById("risultato").innerHTML =
-        "Impossibile accedere alla fotocamera.<br><br>" +
+        "❌ Impossibile accedere alla fotocamera.<br><br>" +
         "Controlla di aver consentito l'accesso alla fotocamera.";
 
     });
+
   }
 
+
+  /*
+   * Avvio automatico
+   */
+
   window.onload = function() {
+
     avviaScanner();
+
   };
 
 </script>
