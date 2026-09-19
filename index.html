@@ -38,6 +38,7 @@
 
     h2 {
       font-size: 21px;
+      margin-bottom: 10px;
     }
 
     #reader {
@@ -48,10 +49,10 @@
 
     #risultato {
       margin-top: 20px;
-      padding: 15px;
+      padding: 18px;
       border-radius: 10px;
       background: #f1f1f1;
-      font-size: 16px;
+      font-size: 17px;
       word-break: break-word;
     }
 
@@ -69,15 +70,19 @@
       cursor: pointer;
     }
 
-    #linkTest {
+    #pulsante:active {
+      transform: scale(0.98);
+    }
+
+    #debug {
       display: none;
       margin-top: 20px;
       padding: 12px;
       background: #fff3cd;
       border-radius: 8px;
-      word-break: break-all;
-      font-size: 12px;
       text-align: left;
+      font-size: 12px;
+      word-break: break-all;
     }
   </style>
 </head>
@@ -102,7 +107,7 @@
     TORNA ALLO STAND
   </button>
 
-  <div id="linkTest"></div>
+  <div id="debug"></div>
 
 </div>
 
@@ -110,7 +115,7 @@
 <script>
 
   // ==========================================
-  // PARAMETRI RICEVUTI
+  // PARAMETRI
   // ==========================================
 
   const params =
@@ -118,8 +123,6 @@
 
   const ritorno =
     params.get("ritorno") || "";
-
-  let scanner = null;
 
   let giaLetto = false;
 
@@ -136,17 +139,20 @@
       return "";
     }
 
+    let url = ritorno;
+
     const separatore =
-      ritorno.indexOf("?") >= 0
+      url.indexOf("?") >= 0
         ? "&"
         : "?";
 
-    return (
-      ritorno +
+    url =
+      url +
       separatore +
       "qr=" +
-      encodeURIComponent(decodedText)
-    );
+      encodeURIComponent(decodedText);
+
+    return url;
   }
 
 
@@ -157,10 +163,17 @@
   function tornaAlloStand() {
 
     if (!urlRitorno) {
+
       alert("URL di ritorno mancante.");
+
       return;
     }
 
+    document.getElementById("risultato").innerHTML =
+      "<strong>Ritorno allo stand...</strong><br><br>" +
+      "Attendere...";
+
+    // Usiamo direttamente la navigazione del browser.
     window.location.href = urlRitorno;
   }
 
@@ -175,13 +188,13 @@
 
       document.getElementById("risultato").innerHTML =
         "<strong>ERRORE</strong><br><br>" +
-        "Manca l'indirizzo di ritorno.";
+        "URL di ritorno mancante.";
 
       return;
     }
 
 
-    scanner =
+    const scanner =
       new Html5Qrcode("reader");
 
 
@@ -203,6 +216,9 @@
 
       function(decodedText) {
 
+        // Evita che il QR venga letto
+        // più volte consecutivamente.
+
         if (giaLetto) {
           return;
         }
@@ -211,7 +227,7 @@
 
 
         // ======================================
-        // COSTRUISCE URL
+        // COSTRUISCE IL LINK
         // ======================================
 
         urlRitorno =
@@ -219,23 +235,21 @@
 
 
         // ======================================
-        // FERMA FOTOCAMERA
+        // NASCONDE LO SCANNER
+        // SENZA FERMARLO
         // ======================================
 
-        if (scanner) {
-
-          scanner.stop().catch(function() {});
-
-        }
+        document.getElementById("reader").style.display =
+          "none";
 
 
         // ======================================
-        // MOSTRA RISULTATO
+        // MOSTRA QR RICONOSCIUTO
         // ======================================
 
         document.getElementById("risultato").innerHTML =
-          "<strong>✅ QR RICONOSCIUTO</strong><br><br>" +
-          "Codice voucher:<br>" +
+          "<strong>✅ VOUCHER RICONOSCIUTO</strong><br><br>" +
+          "Codice voucher:<br><br>" +
           "<strong>" +
           decodedText +
           "</strong><br><br>" +
@@ -252,21 +266,22 @@
         pulsante.style.display =
           "block";
 
+
         pulsante.onclick =
           tornaAlloStand;
 
 
         // ======================================
-        // MOSTRA URL PER CONTROLLO
+        // MOSTRA URL GENERATO
         // ======================================
 
-        const linkTest =
-          document.getElementById("linkTest");
+        const debug =
+          document.getElementById("debug");
 
-        linkTest.style.display =
+        debug.style.display =
           "block";
 
-        linkTest.innerHTML =
+        debug.innerHTML =
           "<strong>URL generato:</strong><br><br>" +
           urlRitorno;
 
@@ -275,8 +290,8 @@
 
       function(errorMessage) {
 
-        // Ignora gli errori normali
-        // durante la ricerca del QR.
+        // Errori normali durante la ricerca
+        // del QR: non facciamo nulla.
 
       }
 
@@ -287,8 +302,7 @@
       document.getElementById("risultato").innerHTML =
         "<strong>❌ ERRORE FOTOCAMERA</strong><br><br>" +
         "Controlla di aver autorizzato " +
-        "l'accesso alla fotocamera.<br><br>" +
-        error;
+        "l'accesso alla fotocamera.";
 
     });
 
