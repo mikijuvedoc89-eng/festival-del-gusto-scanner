@@ -3,78 +3,65 @@
 
 <head>
 
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-  <title>Festival del Gusto - Scanner</title>
+<title>Festival del Gusto - Scanner</title>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-  <style>
+<style>
 
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      text-align: center;
-    }
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  text-align: center;
+}
 
-    .box {
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 3px 15px rgba(0,0,0,.15);
-    }
+.box {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 3px 15px rgba(0,0,0,.15);
+}
 
-    h1 {
-      margin-top: 0;
-    }
+h1 {
+  margin-top: 0;
+}
 
-    #reader {
-      width: 100%;
-      max-width: 500px;
-      margin: 20px auto;
-    }
+#reader {
+  width: 100%;
+  max-width: 500px;
+  margin: 20px auto;
+}
 
-    #risultato {
-      margin-top: 20px;
-      padding: 20px;
-      border-radius: 10px;
-      background: #eee;
-      word-break: break-word;
-    }
+#risultato {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #eee;
+  word-break: break-word;
+}
 
-    #ritorno {
-      display: none;
-      margin-top: 20px;
-      padding: 18px;
-      background: #1976d2;
-      color: white;
-      text-decoration: none;
-      border-radius: 10px;
-      font-size: 18px;
-      font-weight: bold;
-    }
+#ritorno {
+  display: none;
+  margin-top: 20px;
+  padding: 18px;
+  background: #1976d2;
+  color: white;
+  text-decoration: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+}
 
-    #indirizzo {
-      display: none;
-      margin-top: 15px;
-      padding: 12px;
-      background: #f8f8f8;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 12px;
-      text-align: left;
-      word-break: break-all;
-    }
-
-  </style>
+</style>
 
 </head>
 
@@ -82,47 +69,38 @@
 
 <div class="box">
 
-  <h1>Festival del Gusto</h1>
+<h1>Festival del Gusto</h1>
 
-  <h2>Scanner QR</h2>
+<h2>Scanner QR</h2>
 
-  <p>Inquadra il QR code del voucher.</p>
+<p>Inquadra il QR code del voucher.</p>
 
-  <div id="reader"></div>
+<div id="reader"></div>
 
-  <div id="risultato">
-    Avvio fotocamera...
-  </div>
+<div id="risultato">
+Avvio fotocamera...
+</div>
 
-  <div id="indirizzo"></div>
-
-  <a id="ritorno" href="#">
-    TORNA ALLO STAND
-  </a>
+<a id="ritorno" href="#">
+TORNA ALLO STAND
+</a>
 
 </div>
 
 
 <script>
 
-
-/* =====================================================
-   LEGGE IL PARAMETRO RITORNO
-===================================================== */
-
 const parametri =
   new URLSearchParams(window.location.search);
 
-
 const ritorno =
   parametri.get("ritorno");
-
 
 let giaLetto = false;
 
 
 /* =====================================================
-   CONTROLLO
+   CONTROLLO RITORNO
 ===================================================== */
 
 if (!ritorno) {
@@ -151,9 +129,10 @@ function avviaScanner() {
   scanner.start(
 
     {
-      facingMode: "environment"
+      facingMode: {
+        exact: "environment"
+      }
     },
-
 
     {
       fps: 10,
@@ -164,36 +143,23 @@ function avviaScanner() {
       }
     },
 
-
-    /* =================================================
-       QR RILEVATO
-    ================================================= */
-
     function(codice) {
 
       if (giaLetto) {
         return;
       }
 
-
       giaLetto = true;
 
 
-      /* ===============================================
-         FERMA FOTOCAMERA
-      =============================================== */
+      scanner.stop()
+        .catch(function() {});
 
-      scanner.stop().catch(function() {});
-
-
-      /* ===============================================
-         CREA URL DI RITORNO
-      =============================================== */
 
       const separatore =
         ritorno.indexOf("?") >= 0
-          ? "&"
-          : "?";
+        ? "&"
+        : "?";
 
 
       const url =
@@ -203,38 +169,21 @@ function avviaScanner() {
         encodeURIComponent(codice);
 
 
-      /* ===============================================
-         MOSTRA RISULTATO
-      =============================================== */
-
       document.getElementById("risultato").innerHTML =
-        "<strong>✅ QR LETTO</strong><br><br>" +
+
+        "<strong>✅ QR LETTO</strong>" +
+        "<br><br>" +
+
         "Codice voucher:<br>" +
+
         "<strong>" +
         escapeHtml(codice) +
-        "</strong><br><br>" +
+        "</strong>" +
+
+        "<br><br>" +
+
         "Premi il pulsante per tornare allo stand.";
 
-
-      /* ===============================================
-         MOSTRA URL DI RITORNO
-      =============================================== */
-
-      const indirizzo =
-        document.getElementById("indirizzo");
-
-
-      indirizzo.innerHTML =
-        "<strong>Indirizzo di ritorno:</strong><br><br>" +
-        escapeHtml(url);
-
-
-      indirizzo.style.display = "block";
-
-
-      /* ===============================================
-         PULSANTE
-      =============================================== */
 
       const link =
         document.getElementById("ritorno");
@@ -246,42 +195,46 @@ function avviaScanner() {
 
     },
 
-
-    /* =================================================
-       ERRORI NORMALI DI SCANSIONE
-    ================================================= */
-
     function(error) {
 
-      // Nessuna azione.
-      // Sono errori normali mentre cerca il QR.
+      /* errore normale durante la ricerca del QR */
 
     }
 
   )
 
-
-  /* ===================================================
-     ERRORE AVVIO FOTOCAMERA
-  =================================================== */
-
   .catch(function(error) {
 
-    console.error(error);
+    console.error(
+      "ERRORE FOTOCAMERA:",
+      error
+    );
 
 
     document.getElementById("risultato").innerHTML =
 
-      "<strong>❌ ACCESSO FOTOCAMERA NEGATO</strong>" +
-      "<br><br>" +
-
-      "Il browser non ha concesso l'accesso " +
-      "alla fotocamera." +
+      "<strong>❌ ERRORE FOTOCAMERA</strong>" +
 
       "<br><br>" +
 
-      "Controlla il permesso della fotocamera " +
-      "per questo sito e riprova.";
+      "Il browser non riesce ad avviare la fotocamera." +
+
+      "<br><br>" +
+
+      "<strong>ERRORE TECNICO:</strong>" +
+
+      "<br><br>" +
+
+      "<span style='font-size:13px'>" +
+
+      escapeHtml(
+        error &&
+        error.message
+          ? error.message
+          : String(error)
+      ) +
+
+      "</span>";
 
   });
 
@@ -289,7 +242,7 @@ function avviaScanner() {
 
 
 /* =====================================================
-   SICUREZZA TESTO
+   SICUREZZA
 ===================================================== */
 
 function escapeHtml(testo) {
