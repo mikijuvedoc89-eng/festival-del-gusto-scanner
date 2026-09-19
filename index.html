@@ -5,9 +5,8 @@
 
   <meta charset="UTF-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
   <title>Festival del Gusto - Scanner</title>
 
@@ -78,6 +77,7 @@
 
 </head>
 
+
 <body>
 
 <div class="box">
@@ -106,12 +106,10 @@
 <script>
 
 
-/* =====================================================
-   PARAMETRI URL
-===================================================== */
-
 const parametri =
-  new URLSearchParams(window.location.search);
+  new URLSearchParams(
+    window.location.search
+  );
 
 
 const ritorno =
@@ -127,11 +125,11 @@ let giaLetto = false;
 
 if (!ritorno) {
 
-  document.getElementById("risultato").innerHTML =
+  document.getElementById(
+    "risultato"
+  ).innerHTML =
 
-    "<strong>❌ ERRORE</strong>" +
-
-    "<br><br>" +
+    "<strong>ERRORE</strong><br><br>" +
 
     "Manca il collegamento allo stand.";
 
@@ -154,19 +152,9 @@ function avviaScanner() {
 
   scanner.start(
 
-    /* =================================================
-       FOTOCAMERA
-       NON USIAMO exact
-    ================================================= */
-
     {
       facingMode: "environment"
     },
-
-
-    /* =================================================
-       CONFIGURAZIONE QR
-    ================================================= */
 
     {
       fps: 10,
@@ -175,16 +163,13 @@ function avviaScanner() {
         width: 250,
         height: 250
       }
+
     },
-
-
-    /* =================================================
-       QR LETTO
-    ================================================= */
 
     function(codice) {
 
       if (giaLetto) {
+
         return;
       }
 
@@ -192,67 +177,59 @@ function avviaScanner() {
       giaLetto = true;
 
 
-      /* ===============================================
-         FERMA SCANNER
-      =============================================== */
-
-      scanner.stop()
+      scanner
+        .stop()
         .catch(function() {});
 
-
-      /* ===============================================
-         CREA URL RITORNO
-      =============================================== */
 
       const separatore =
 
         ritorno.indexOf("?") >= 0
+
           ? "&"
+
           : "?";
 
 
       const url =
 
         ritorno +
+
         separatore +
+
         "qr=" +
-        encodeURIComponent(codice);
+
+        encodeURIComponent(
+          codice
+        );
 
 
-      /* ===============================================
-         MOSTRA RISULTATO
-      =============================================== */
+      document.getElementById(
+        "risultato"
+      ).innerHTML =
 
-      document.getElementById("risultato").innerHTML =
-
-        "<strong>✅ QR LETTO</strong>" +
-
-        "<br><br>" +
+        "<strong>✅ QR LETTO</strong><br><br>" +
 
         "Codice voucher:<br>" +
 
         "<strong>" +
-        escapeHtml(codice) +
-        "</strong>" +
 
-        "<br><br>" +
+        escapeHtml(codice) +
+
+        "</strong><br><br>" +
 
         "Premi il pulsante per tornare allo stand.";
 
 
-      /* ===============================================
-         MOSTRA URL
-      =============================================== */
-
       const indirizzo =
-        document.getElementById("indirizzo");
+        document.getElementById(
+          "indirizzo"
+        );
 
 
       indirizzo.innerHTML =
 
-        "<strong>Indirizzo di ritorno:</strong>" +
-
-        "<br><br>" +
+        "<strong>Indirizzo di ritorno:</strong><br><br>" +
 
         escapeHtml(url);
 
@@ -261,12 +238,10 @@ function avviaScanner() {
         "block";
 
 
-      /* ===============================================
-         PULSANTE TORNA ALLO STAND
-      =============================================== */
-
       const link =
-        document.getElementById("ritorno");
+        document.getElementById(
+          "ritorno"
+        );
 
 
       link.href =
@@ -279,71 +254,32 @@ function avviaScanner() {
     },
 
 
-    /* =================================================
-       ERRORI DURANTE LA RICERCA DEL QR
-    ================================================= */
-
     function(error) {
 
       /*
-       * Non mostriamo nulla.
-       *
-       * Durante la ricerca del QR
-       * html5-qrcode genera continuamente
-       * piccoli errori normali.
+       * Gli errori di scansione normali
+       * vengono ignorati.
        */
 
     }
 
   )
 
-
-  /* ===================================================
-     ERRORE AVVIO FOTOCAMERA
-  =================================================== */
-
   .catch(function(error) {
 
-    console.error(
-      "ERRORE FOTOCAMERA:",
-      error
-    );
+    document.getElementById(
+      "risultato"
+    ).innerHTML =
 
+      "<strong>❌ ERRORE FOTOCAMERA</strong><br><br>" +
 
-    let messaggio = "";
+      "Il browser non riesce ad avviare la fotocamera.<br><br>" +
 
-    if (error && error.message) {
+      "<strong>ERRORE TECNICO:</strong><br><br>" +
 
-      messaggio =
-        error.message;
-
-    } else {
-
-      messaggio =
-        String(error);
-
-    }
-
-
-    document.getElementById("risultato").innerHTML =
-
-      "<strong>❌ ERRORE FOTOCAMERA</strong>" +
-
-      "<br><br>" +
-
-      "Il browser non riesce ad avviare la fotocamera." +
-
-      "<br><br>" +
-
-      "<strong>ERRORE TECNICO:</strong>" +
-
-      "<br><br>" +
-
-      "<span style='font-size:13px'>" +
-
-      escapeHtml(messaggio) +
-
-      "</span>";
+      escapeHtml(
+        String(error)
+      );
 
   });
 
@@ -351,22 +287,37 @@ function avviaScanner() {
 
 
 /* =====================================================
-   ESCAPE HTML
+   SICUREZZA
 ===================================================== */
 
 function escapeHtml(testo) {
 
   return String(testo)
 
-    .replace(/&/g, "&amp;")
+    .replace(
+      /&/g,
+      "&amp;"
+    )
 
-    .replace(/</g, "&lt;")
+    .replace(
+      /</g,
+      "&lt;"
+    )
 
-    .replace(/>/g, "&gt;")
+    .replace(
+      />/g,
+      "&gt;"
+    )
 
-    .replace(/"/g, "&quot;")
+    .replace(
+      /"/g,
+      "&quot;"
+    )
 
-    .replace(/'/g, "&#039;");
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 
 }
 
