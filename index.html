@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -56,6 +57,7 @@
       font-weight: bold;
     }
   </style>
+
 </head>
 
 <body>
@@ -82,7 +84,10 @@
 
 <script>
 
-  // URL dello stand ricevuto dal link
+  // =====================================================
+  // LEGGE L'URL DI RITORNO PASSATO DALLO STAND
+  // =====================================================
+
   const parametri =
     new URLSearchParams(window.location.search);
 
@@ -92,7 +97,10 @@
   let giaLetto = false;
 
 
-  // Controllo URL
+  // =====================================================
+  // CONTROLLO URL
+  // =====================================================
+
   if (!ritorno) {
 
     document.getElementById("risultato").innerHTML =
@@ -105,6 +113,10 @@
 
   }
 
+
+  // =====================================================
+  // AVVIO SCANNER
+  // =====================================================
 
   function avviaScanner() {
 
@@ -120,16 +132,22 @@
 
       {
         fps: 10,
+
         qrbox: {
           width: 250,
           height: 250
         }
+
       },
 
 
+      // =================================================
+      // QR LETTO
+      // =================================================
+
       function(codice) {
 
-        // Evita letture ripetute
+        // Evita letture multiple
         if (giaLetto) {
           return;
         }
@@ -137,14 +155,34 @@
         giaLetto = true;
 
 
-        // =====================================
-        // CREA URL DELLO STAND
-        // =====================================
+        // ===============================================
+        // FERMA LA FOTOCAMERA
+        // ===============================================
 
-        const separatore =
-          ritorno.indexOf("?") >= 0
-            ? "&"
-            : "?";
+        scanner.stop()
+          .catch(function() {
+            // Se non riesce a fermarla,
+            // procediamo comunque.
+          });
+
+
+        // ===============================================
+        // CREA IL LINK DI RITORNO
+        //
+        // "ritorno" contiene già:
+        //
+        // https://script.google.com/.../exec?stand=S_xxxxx
+        //
+        // quindi dobbiamo aggiungere &qr=
+        // ===============================================
+
+        let separatore;
+
+        if (ritorno.indexOf("?") >= 0) {
+          separatore = "&";
+        } else {
+          separatore = "?";
+        }
 
 
         const url =
@@ -154,55 +192,83 @@
           encodeURIComponent(codice);
 
 
-        // =====================================
-        // MOSTRA RISULTATO
-        // =====================================
+        // ===============================================
+        // MOSTRA IL CODICE LETTO
+        // ===============================================
 
         document.getElementById("risultato").innerHTML =
-          "<strong>✅ VOUCHER RICONOSCIUTO</strong><br><br>" +
+          "<strong>✅ VOUCHER LETTO</strong><br><br>" +
           "Codice:<br>" +
           "<strong>" +
-          codice +
+          escapeHtml(codice) +
           "</strong><br><br>" +
-          "Il voucher è stato letto correttamente.";
+          "Ritorno allo stand...";
 
 
-        // =====================================
-        // CREA LINK NORMALE
-        // =====================================
+        // ===============================================
+        // PREPARA IL PULSANTE
+        // ===============================================
 
         const link =
           document.getElementById("ritorno");
-
 
         link.href = url;
 
         link.style.display = "block";
 
 
-        // NON facciamo:
-        // scanner.stop()
-        // window.location
-        // window.open
+        // ===============================================
+        // TORNA AUTOMATICAMENTE ALLO STAND
         //
-        // Il browser deve semplicemente
-        // mostrare il link.
+        // Piccolo ritardo per permettere al browser
+        // di completare la lettura del QR.
+        // ===============================================
+
+        setTimeout(function() {
+
+          window.location.href = url;
+
+        }, 500);
 
       },
 
 
+      // =================================================
+      // ERRORI DI LETTURA
+      // =================================================
+
       function(error) {
 
-        // Ignoriamo gli errori di scansione
+        // Ignoriamo gli errori normali
+        // mentre la fotocamera sta cercando il QR.
+
       }
 
     ).catch(function(error) {
 
       document.getElementById("risultato").innerHTML =
         "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
-        "Impossibile accedere alla fotocamera.";
+        "Impossibile accedere alla fotocamera.<br><br>" +
+        "Controlla di aver autorizzato il browser " +
+        "ad utilizzare la fotocamera.";
 
     });
+
+  }
+
+
+  // =====================================================
+  // SICUREZZA: MOSTRA IL CODICE COME TESTO
+  // =====================================================
+
+  function escapeHtml(testo) {
+
+    return String(testo)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
   }
 
