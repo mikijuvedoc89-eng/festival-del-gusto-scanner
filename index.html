@@ -56,6 +56,18 @@
       font-size: 18px;
       font-weight: bold;
     }
+
+    #indirizzo {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      background: #f8f8f8;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 12px;
+      text-align: left;
+      word-break: break-all;
+    }
   </style>
 
 </head>
@@ -76,6 +88,8 @@
     Avvio fotocamera...
   </div>
 
+  <div id="indirizzo"></div>
+
   <a id="ritorno" href="#">
     TORNA ALLO STAND
   </a>
@@ -85,7 +99,7 @@
 <script>
 
   // =====================================================
-  // LEGGE L'URL DI RITORNO PASSATO DALLO STAND
+  // LEGGE IL PARAMETRO "ritorno"
   // =====================================================
 
   const parametri =
@@ -98,7 +112,7 @@
 
 
   // =====================================================
-  // CONTROLLO URL
+  // CONTROLLO
   // =====================================================
 
   if (!ritorno) {
@@ -115,7 +129,7 @@
 
 
   // =====================================================
-  // AVVIO SCANNER
+  // SCANNER
   // =====================================================
 
   function avviaScanner() {
@@ -137,17 +151,15 @@
           width: 250,
           height: 250
         }
-
       },
 
 
       // =================================================
-      // QR LETTO
+      // QR RILEVATO
       // =================================================
 
       function(codice) {
 
-        // Evita letture multiple
         if (giaLetto) {
           return;
         }
@@ -155,34 +167,18 @@
         giaLetto = true;
 
 
-        // ===============================================
-        // FERMA LA FOTOCAMERA
-        // ===============================================
-
-        scanner.stop()
-          .catch(function() {
-            // Se non riesce a fermarla,
-            // procediamo comunque.
-          });
+        // Ferma la fotocamera
+        scanner.stop().catch(function() {});
 
 
-        // ===============================================
-        // CREA IL LINK DI RITORNO
-        //
-        // "ritorno" contiene già:
-        //
-        // https://script.google.com/.../exec?stand=S_xxxxx
-        //
-        // quindi dobbiamo aggiungere &qr=
-        // ===============================================
+        // =================================================
+        // CREA URL CORRETTO
+        // =================================================
 
-        let separatore;
-
-        if (ritorno.indexOf("?") >= 0) {
-          separatore = "&";
-        } else {
-          separatore = "?";
-        }
+        const separatore =
+          ritorno.indexOf("?") >= 0
+            ? "&"
+            : "?";
 
 
         const url =
@@ -192,22 +188,36 @@
           encodeURIComponent(codice);
 
 
-        // ===============================================
-        // MOSTRA IL CODICE LETTO
-        // ===============================================
+        // =================================================
+        // MOSTRA RISULTATO
+        // =================================================
 
         document.getElementById("risultato").innerHTML =
-          "<strong>✅ VOUCHER LETTO</strong><br><br>" +
-          "Codice:<br>" +
+          "<strong>✅ QR LETTO</strong><br><br>" +
+          "Codice voucher:<br>" +
           "<strong>" +
           escapeHtml(codice) +
           "</strong><br><br>" +
-          "Ritorno allo stand...";
+          "Premi il pulsante per tornare allo stand.";
 
 
-        // ===============================================
-        // PREPARA IL PULSANTE
-        // ===============================================
+        // =================================================
+        // MOSTRA URL GENERATO
+        // =================================================
+
+        const indirizzo =
+          document.getElementById("indirizzo");
+
+        indirizzo.innerHTML =
+          "<strong>Indirizzo di ritorno:</strong><br><br>" +
+          escapeHtml(url);
+
+        indirizzo.style.display = "block";
+
+
+        // =================================================
+        // PULSANTE
+        // =================================================
 
         const link =
           document.getElementById("ritorno");
@@ -216,41 +226,18 @@
 
         link.style.display = "block";
 
-
-        // ===============================================
-        // TORNA AUTOMATICAMENTE ALLO STAND
-        //
-        // Piccolo ritardo per permettere al browser
-        // di completare la lettura del QR.
-        // ===============================================
-
-        setTimeout(function() {
-
-          window.location.href = url;
-
-        }, 500);
-
       },
 
 
-      // =================================================
-      // ERRORI DI LETTURA
-      // =================================================
-
-      function(error) {
-
-        // Ignoriamo gli errori normali
-        // mentre la fotocamera sta cercando il QR.
-
-      }
+      // Errori normali di scansione
+      function(error) {}
 
     ).catch(function(error) {
 
       document.getElementById("risultato").innerHTML =
         "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
         "Impossibile accedere alla fotocamera.<br><br>" +
-        "Controlla di aver autorizzato il browser " +
-        "ad utilizzare la fotocamera.";
+        "Controlla i permessi della fotocamera.";
 
     });
 
@@ -258,7 +245,7 @@
 
 
   // =====================================================
-  // SICUREZZA: MOSTRA IL CODICE COME TESTO
+  // SICUREZZA TESTO
   // =====================================================
 
   function escapeHtml(testo) {
