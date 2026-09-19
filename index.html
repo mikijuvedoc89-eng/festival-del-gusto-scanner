@@ -57,15 +57,27 @@
 
     #pulsante {
       display: none;
+      width: 100%;
       margin-top: 20px;
-      padding: 15px 25px;
-      font-size: 18px;
+      padding: 18px;
+      font-size: 19px;
       font-weight: bold;
       border: 0;
       border-radius: 10px;
       background: #1976d2;
       color: white;
       cursor: pointer;
+    }
+
+    #linkTest {
+      display: none;
+      margin-top: 20px;
+      padding: 12px;
+      background: #fff3cd;
+      border-radius: 8px;
+      word-break: break-all;
+      font-size: 12px;
+      text-align: left;
     }
   </style>
 </head>
@@ -90,13 +102,15 @@
     TORNA ALLO STAND
   </button>
 
+  <div id="linkTest"></div>
+
 </div>
 
 
 <script>
 
   // ==========================================
-  // PARAMETRI
+  // PARAMETRI RICEVUTI
   // ==========================================
 
   const params =
@@ -113,7 +127,7 @@
 
 
   // ==========================================
-  // CREA URL
+  // CREA URL DI RITORNO
   // ==========================================
 
   function creaUrlRitorno(decodedText) {
@@ -143,22 +157,16 @@
   function tornaAlloStand() {
 
     if (!urlRitorno) {
+      alert("URL di ritorno mancante.");
       return;
     }
 
-    document.getElementById("risultato").innerHTML =
-      "<strong>APERTURA STAND...</strong><br><br>" +
-      "Attendere...";
-
-    window.open(
-      urlRitorno,
-      "_self"
-    );
+    window.location.href = urlRitorno;
   }
 
 
   // ==========================================
-  // SCANSIONE
+  // AVVIA SCANNER
   // ==========================================
 
   function avviaScanner() {
@@ -202,31 +210,18 @@
         giaLetto = true;
 
 
-        // Costruisce il link
+        // ======================================
+        // COSTRUISCE URL
+        // ======================================
+
         urlRitorno =
           creaUrlRitorno(decodedText);
 
 
-        // Mostra QR riconosciuto
-        document.getElementById("risultato").innerHTML =
-          "<strong>QR RICONOSCIUTO</strong><br><br>" +
-          "Voucher: " +
-          decodedText;
+        // ======================================
+        // FERMA FOTOCAMERA
+        // ======================================
 
-
-        // Mostra pulsante
-        const pulsante =
-          document.getElementById("pulsante");
-
-        pulsante.style.display =
-          "inline-block";
-
-
-        pulsante.onclick =
-          tornaAlloStand;
-
-
-        // Prova a fermare la fotocamera
         if (scanner) {
 
           scanner.stop().catch(function() {});
@@ -234,19 +229,55 @@
         }
 
 
-        // Dopo 1 secondo torna automaticamente
-        setTimeout(function() {
+        // ======================================
+        // MOSTRA RISULTATO
+        // ======================================
 
-          tornaAlloStand();
+        document.getElementById("risultato").innerHTML =
+          "<strong>✅ QR RICONOSCIUTO</strong><br><br>" +
+          "Codice voucher:<br>" +
+          "<strong>" +
+          decodedText +
+          "</strong><br><br>" +
+          "Premi il pulsante per tornare allo stand.";
 
-        }, 1000);
+
+        // ======================================
+        // MOSTRA PULSANTE
+        // ======================================
+
+        const pulsante =
+          document.getElementById("pulsante");
+
+        pulsante.style.display =
+          "block";
+
+        pulsante.onclick =
+          tornaAlloStand;
+
+
+        // ======================================
+        // MOSTRA URL PER CONTROLLO
+        // ======================================
+
+        const linkTest =
+          document.getElementById("linkTest");
+
+        linkTest.style.display =
+          "block";
+
+        linkTest.innerHTML =
+          "<strong>URL generato:</strong><br><br>" +
+          urlRitorno;
 
       },
 
 
       function(errorMessage) {
 
-        // Normali errori durante la ricerca QR.
+        // Ignora gli errori normali
+        // durante la ricerca del QR.
+
       }
 
     )
@@ -254,7 +285,7 @@
     .catch(function(error) {
 
       document.getElementById("risultato").innerHTML =
-        "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
+        "<strong>❌ ERRORE FOTOCAMERA</strong><br><br>" +
         "Controlla di aver autorizzato " +
         "l'accesso alla fotocamera.<br><br>" +
         error;
