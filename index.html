@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -15,92 +14,72 @@
     }
 
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
       margin: 0;
       padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #222;
       text-align: center;
     }
 
     .box {
-      width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       margin: 0 auto;
       background: white;
-      padding: 25px;
-      border-radius: 18px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.15);
     }
 
     h1 {
       margin-top: 0;
-      color: #b71c1c;
+      font-size: 28px;
     }
 
     h2 {
+      font-size: 21px;
       margin-bottom: 10px;
     }
 
     p {
-      color: #555;
+      font-size: 16px;
     }
 
     #reader {
       width: 100%;
-      margin-top: 20px;
+      max-width: 500px;
+      margin: 20px auto;
     }
 
     #risultato {
       margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f1f1f1;
+      font-size: 16px;
       word-break: break-word;
     }
 
-    .success {
-      color: #176b1d;
-    }
-
-    .error {
-      color: #a00000;
-    }
-
-    .loading {
-      color: #555;
-    }
-
-    .url-debug {
+    #debug {
       margin-top: 15px;
       padding: 10px;
-      background: #f1f1f1;
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
       border-radius: 8px;
-      font-size: 11px;
+      font-size: 13px;
       word-break: break-all;
-      text-align: left;
       display: none;
     }
-
-    button {
-      margin-top: 20px;
-      padding: 14px 22px;
-      border: 0;
-      border-radius: 10px;
-      background: #b71c1c;
-      color: white;
-      font-size: 17px;
-      cursor: pointer;
-    }
   </style>
-
 </head>
 
 <body>
 
 <div class="box">
 
-  <h1>FESTIVAL DEL GUSTO</h1>
+  <h1>Festival del Gusto</h1>
 
-  <h2>📷 Scansione QR Code</h2>
+  <h2>Scansione QR Code</h2>
 
   <p>
     Inquadra il QR code del voucher.
@@ -108,361 +87,200 @@
 
   <div id="reader"></div>
 
-  <div id="risultato" class="loading">
+  <div id="risultato">
     Avvio fotocamera...
   </div>
 
-  <div id="debugUrl" class="url-debug"></div>
+  <div id="debug"></div>
 
 </div>
 
 <script>
 
-/* ============================================================
-   PARAMETRI
-   ============================================================ */
+  // ==========================================
+  // PARAMETRI RICEVUTI
+  // ==========================================
 
-const params =
-  new URLSearchParams(
-    window.location.search
-  );
+  const params = new URLSearchParams(window.location.search);
 
+  const ritorno = params.get("ritorno") || "";
 
-/*
- * Questo è l'indirizzo della pagina dello stand.
- *
- * Esempio:
- *
- * https://script.google.com/macros/s/XXXXX/exec?stand=S_12345
- */
-
-const ritorno =
-  params.get("ritorno") || "";
+  let scanner = null;
+  let giaLetto = false;
 
 
-let scanner = null;
+  // ==========================================
+  // CREA URL DI RITORNO
+  // ==========================================
 
-let giaLetto = false;
+  function creaUrlRitorno(decodedText) {
 
+    if (!ritorno) {
+      return "";
+    }
 
-/* ============================================================
-   CREAZIONE URL DI RITORNO
-   ============================================================ */
+    let url = ritorno;
 
-function creaUrlRitorno(decodedText) {
+    const separatore = url.indexOf("?") >= 0 ? "&" : "?";
 
-  if (!ritorno) {
+    url =
+      url +
+      separatore +
+      "qr=" +
+      encodeURIComponent(decodedText);
 
-    return "";
-
+    return url;
   }
 
 
-  /*
-   * Il parametro "ritorno" viene decodificato
-   * automaticamente da URLSearchParams.
-   *
-   * Contiene già:
-   *
-   * ?stand=S_XXXXXXXX
-   *
-   * Perciò dobbiamo aggiungere:
-   *
-   * &qr=XXXXXXXX
-   *
-   * e NON un altro ?stand.
-   */
+  // ==========================================
+  // AVVIA SCANNER
+  // ==========================================
 
-  let url =
-    ritorno;
+  function avviaScanner() {
+
+    if (!ritorno) {
+
+      document.getElementById("risultato").innerHTML =
+        "<strong>Errore</strong><br><br>" +
+        "URL di ritorno mancante.";
+
+      return;
+    }
 
 
-  const separatore =
-    url.indexOf("?") >= 0
-      ? "&"
-      : "?";
+    scanner = new Html5Qrcode("reader");
 
 
-  url =
-    url +
-    separatore +
-    "qr=" +
-    encodeURIComponent(
-      decodedText
-    );
+    scanner.start(
+
+      {
+        facingMode: "environment"
+      },
+
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
 
 
-  return url;
+      function(decodedText) {
 
-}
+        // Evita letture multiple dello stesso QR
+        if (giaLetto) {
+          return;
+        }
 
-
-/* ============================================================
-   AVVIO SCANNER
-   ============================================================ */
-
-function avviaScanner() {
-
-  /*
-   * Controlliamo che sia presente
-   * l'indirizzo di ritorno.
-   */
-
-  if (!ritorno) {
-
-    document.getElementById(
-      "risultato"
-    ).innerHTML =
-
-      "❌ ERRORE<br><br>" +
-
-      "Manca l'indirizzo di ritorno allo stand.";
-
-    document.getElementById(
-      "risultato"
-    ).className = "error";
-
-    return;
-
-  }
+        giaLetto = true;
 
 
-  /*
-   * Creiamo lo scanner.
-   */
-
-  scanner =
-    new Html5Qrcode(
-      "reader"
-    );
+        // Costruiamo URL di ritorno
+        const urlRitorno =
+          creaUrlRitorno(decodedText);
 
 
-  /*
-   * Avviamo la fotocamera posteriore.
-   */
-
-  scanner.start(
-
-    {
-      facingMode: "environment"
-    },
-
-    {
-      fps: 10,
-
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
+        // Mostriamo il risultato
+        document.getElementById("risultato").innerHTML =
+          "<strong>QR RICONOSCIUTO</strong><br><br>" +
+          "Ritorno allo stand...";
 
 
-    /*
-     * QR RICONOSCIUTO
-     */
+        // Mostra temporaneamente l'URL
+        const debug =
+          document.getElementById("debug");
 
-    function(decodedText) {
+        debug.style.display = "block";
 
-      /*
-       * Evitiamo doppie letture.
-       */
-
-      if (giaLetto) {
-
-        return;
-
-      }
+        debug.innerHTML =
+          "<strong>URL DI RITORNO:</strong><br><br>" +
+          urlRitorno;
 
 
-      giaLetto = true;
+        // ======================================
+        // TEST IMPORTANTE
+        // ======================================
 
+        // Mostra l'URL in una finestra.
+        // Questo ci permette di controllare
+        // esattamente dove sta tentando di tornare.
 
-      /*
-       * Mostriamo il messaggio.
-       */
-
-      document.getElementById(
-        "risultato"
-      ).innerHTML =
-
-        "✅ QR RICONOSCIUTO<br><br>" +
-
-        "Ritorno allo stand...";
-
-      document.getElementById(
-        "risultato"
-      ).className = "success";
-
-
-      /*
-       * Creiamo l'URL corretto.
-       */
-
-      const urlRitorno =
-        creaUrlRitorno(
-          decodedText
+        alert(
+          "URL DI RITORNO:\n\n" +
+          urlRitorno
         );
 
 
-      /*
-       * Controllo di sicurezza.
-       */
+        // ======================================
+        // TORNA ALLO STAND
+        // ======================================
 
-      if (!urlRitorno) {
+        setTimeout(function() {
 
-        document.getElementById(
-          "risultato"
-        ).innerHTML =
+          if (scanner) {
 
-          "❌ ERRORE<br><br>" +
+            scanner.stop()
 
-          "Indirizzo di ritorno non disponibile.";
+              .then(function() {
 
-        document.getElementById(
-          "risultato"
-        ).className = "error";
+                window.location.replace(
+                  urlRitorno
+                );
 
+              })
 
-        giaLetto = false;
+              .catch(function() {
 
-        return;
+                window.location.replace(
+                  urlRitorno
+                );
 
-      }
+              });
 
-
-      /*
-       * Mostriamo temporaneamente
-       * l'URL che verrà aperto.
-       *
-       * Utile per eventuale diagnosi.
-       */
-
-      const debug =
-        document.getElementById(
-          "debugUrl"
-        );
-
-
-      debug.textContent =
-        urlRitorno;
-
-
-      /*
-       * Dopo una breve pausa fermiamo
-       * la fotocamera e torniamo
-       * alla pagina dello stand.
-       */
-
-      setTimeout(
-
-        function() {
-
-          if (!scanner) {
+          } else {
 
             window.location.replace(
               urlRitorno
             );
 
-            return;
-
           }
 
+        }, 500);
 
-          scanner.stop()
-
-            .then(
-
-              function() {
-
-                window.location.replace(
-                  urlRitorno
-                );
-
-              }
-
-            )
-
-            .catch(
-
-              function() {
-
-                /*
-                 * Anche se la fotocamera
-                 * non si ferma correttamente,
-                 * torniamo comunque allo stand.
-                 */
-
-                window.location.replace(
-                  urlRitorno
-                );
-
-              }
-
-            );
-
-        },
-
-        500
-
-      );
-
-    },
+      },
 
 
-    /*
-     * ERRORI DI SCANSIONE
-     *
-     * Non facciamo nulla.
-     * Lo scanner continua a cercare.
-     */
+      function(errorMessage) {
 
-    function(errorMessage) {
+        // Errori di scansione normali:
+        // non facciamo nulla.
+      }
 
-    }
+    )
 
-  )
+    .catch(function(error) {
 
+      document.getElementById("risultato").innerHTML =
+        "<strong>Impossibile accedere alla fotocamera.</strong><br><br>" +
+        "Controlla di aver consentito l'accesso alla fotocamera.<br><br>" +
+        error;
 
-  /*
-   * ERRORE AVVIO FOTOCAMERA
-   */
+    });
 
-  .catch(
-
-    function(error) {
-
-      document.getElementById(
-        "risultato"
-      ).innerHTML =
-
-        "❌ IMPOSSIBILE ACCEDERE ALLA FOTOCAMERA<br><br>" +
-
-        "Controlla di aver autorizzato " +
-        "l'accesso alla fotocamera.";
-
-      document.getElementById(
-        "risultato"
-      ).className = "error";
-
-    }
-
-  );
-
-}
+  }
 
 
-/* ============================================================
-   AVVIO PAGINA
-   ============================================================ */
+  // ==========================================
+  // AVVIO AUTOMATICO
+  // ==========================================
 
-window.addEventListener(
-  "load",
-  function() {
+  window.onload = function() {
 
     avviaScanner();
 
-  }
-);
+  };
 
 </script>
 
