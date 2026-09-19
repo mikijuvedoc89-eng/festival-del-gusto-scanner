@@ -38,11 +38,6 @@
 
     h2 {
       font-size: 21px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 16px;
     }
 
     #reader {
@@ -60,15 +55,17 @@
       word-break: break-word;
     }
 
-    #debug {
-      margin-top: 15px;
-      padding: 10px;
-      background: #fff3cd;
-      border: 1px solid #ffe69c;
-      border-radius: 8px;
-      font-size: 13px;
-      word-break: break-all;
+    #pulsante {
       display: none;
+      margin-top: 20px;
+      padding: 15px 25px;
+      font-size: 18px;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #1976d2;
+      color: white;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -81,9 +78,7 @@
 
   <h2>Scansione QR Code</h2>
 
-  <p>
-    Inquadra il QR code del voucher.
-  </p>
+  <p>Inquadra il QR code del voucher.</p>
 
   <div id="reader"></div>
 
@@ -91,26 +86,34 @@
     Avvio fotocamera...
   </div>
 
-  <div id="debug"></div>
+  <button id="pulsante">
+    TORNA ALLO STAND
+  </button>
 
 </div>
+
 
 <script>
 
   // ==========================================
-  // PARAMETRI RICEVUTI
+  // PARAMETRI
   // ==========================================
 
-  const params = new URLSearchParams(window.location.search);
+  const params =
+    new URLSearchParams(window.location.search);
 
-  const ritorno = params.get("ritorno") || "";
+  const ritorno =
+    params.get("ritorno") || "";
 
   let scanner = null;
+
   let giaLetto = false;
+
+  let urlRitorno = "";
 
 
   // ==========================================
-  // CREA URL DI RITORNO
+  // CREA URL
   // ==========================================
 
   function creaUrlRitorno(decodedText) {
@@ -119,22 +122,43 @@
       return "";
     }
 
-    let url = ritorno;
+    const separatore =
+      ritorno.indexOf("?") >= 0
+        ? "&"
+        : "?";
 
-    const separatore = url.indexOf("?") >= 0 ? "&" : "?";
-
-    url =
-      url +
+    return (
+      ritorno +
       separatore +
       "qr=" +
-      encodeURIComponent(decodedText);
-
-    return url;
+      encodeURIComponent(decodedText)
+    );
   }
 
 
   // ==========================================
-  // AVVIA SCANNER
+  // TORNA ALLO STAND
+  // ==========================================
+
+  function tornaAlloStand() {
+
+    if (!urlRitorno) {
+      return;
+    }
+
+    document.getElementById("risultato").innerHTML =
+      "<strong>APERTURA STAND...</strong><br><br>" +
+      "Attendere...";
+
+    window.open(
+      urlRitorno,
+      "_self"
+    );
+  }
+
+
+  // ==========================================
+  // SCANSIONE
   // ==========================================
 
   function avviaScanner() {
@@ -142,14 +166,15 @@
     if (!ritorno) {
 
       document.getElementById("risultato").innerHTML =
-        "<strong>Errore</strong><br><br>" +
-        "URL di ritorno mancante.";
+        "<strong>ERRORE</strong><br><br>" +
+        "Manca l'indirizzo di ritorno.";
 
       return;
     }
 
 
-    scanner = new Html5Qrcode("reader");
+    scanner =
+      new Html5Qrcode("reader");
 
 
     scanner.start(
@@ -160,6 +185,7 @@
 
       {
         fps: 10,
+
         qrbox: {
           width: 250,
           height: 250
@@ -169,7 +195,6 @@
 
       function(decodedText) {
 
-        // Evita letture multiple dello stesso QR
         if (giaLetto) {
           return;
         }
@@ -177,85 +202,51 @@
         giaLetto = true;
 
 
-        // Costruiamo URL di ritorno
-        const urlRitorno =
+        // Costruisce il link
+        urlRitorno =
           creaUrlRitorno(decodedText);
 
 
-        // Mostriamo il risultato
+        // Mostra QR riconosciuto
         document.getElementById("risultato").innerHTML =
           "<strong>QR RICONOSCIUTO</strong><br><br>" +
-          "Ritorno allo stand...";
+          "Voucher: " +
+          decodedText;
 
 
-        // Mostra temporaneamente l'URL
-        const debug =
-          document.getElementById("debug");
+        // Mostra pulsante
+        const pulsante =
+          document.getElementById("pulsante");
 
-        debug.style.display = "block";
-
-        debug.innerHTML =
-          "<strong>URL DI RITORNO:</strong><br><br>" +
-          urlRitorno;
+        pulsante.style.display =
+          "inline-block";
 
 
-        // ======================================
-        // TEST IMPORTANTE
-        // ======================================
-
-        // Mostra l'URL in una finestra.
-        // Questo ci permette di controllare
-        // esattamente dove sta tentando di tornare.
-
-        alert(
-          "URL DI RITORNO:\n\n" +
-          urlRitorno
-        );
+        pulsante.onclick =
+          tornaAlloStand;
 
 
-        // ======================================
-        // TORNA ALLO STAND
-        // ======================================
+        // Prova a fermare la fotocamera
+        if (scanner) {
 
+          scanner.stop().catch(function() {});
+
+        }
+
+
+        // Dopo 1 secondo torna automaticamente
         setTimeout(function() {
 
-          if (scanner) {
+          tornaAlloStand();
 
-            scanner.stop()
-
-              .then(function() {
-
-                window.location.replace(
-                  urlRitorno
-                );
-
-              })
-
-              .catch(function() {
-
-                window.location.replace(
-                  urlRitorno
-                );
-
-              });
-
-          } else {
-
-            window.location.replace(
-              urlRitorno
-            );
-
-          }
-
-        }, 500);
+        }, 1000);
 
       },
 
 
       function(errorMessage) {
 
-        // Errori di scansione normali:
-        // non facciamo nulla.
+        // Normali errori durante la ricerca QR.
       }
 
     )
@@ -263,8 +254,9 @@
     .catch(function(error) {
 
       document.getElementById("risultato").innerHTML =
-        "<strong>Impossibile accedere alla fotocamera.</strong><br><br>" +
-        "Controlla di aver consentito l'accesso alla fotocamera.<br><br>" +
+        "<strong>ERRORE FOTOCAMERA</strong><br><br>" +
+        "Controlla di aver autorizzato " +
+        "l'accesso alla fotocamera.<br><br>" +
         error;
 
     });
@@ -273,7 +265,7 @@
 
 
   // ==========================================
-  // AVVIO AUTOMATICO
+  // AVVIO
   // ==========================================
 
   window.onload = function() {
