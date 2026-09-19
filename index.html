@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Festival del Gusto - Scanner QR</title>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .box {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    #reader {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    #risultato {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      word-break: break-word;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 14px 22px;
+      border: 0;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+
+    <h1>Festival del Gusto</h1>
+
+    <h2>Scansione QR Code</h2>
+
+    <p>
+      Inquadra il QR code del voucher.
+    </p>
+
+    <div id="reader"></div>
+
+    <div id="risultato"></div>
+
+  </div>
+
+<script>
+
+  const params = new URLSearchParams(window.location.search);
+
+  const idStand = params.get("stand") || "";
+  const ritorno = params.get("ritorno") || "";
+
+  let scanner;
+
+  function avviaScanner() {
+
+    scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+      { facingMode: "environment" },
+
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+
+      function(decodedText) {
+
+        scanner.stop().then(function() {
+
+          document.getElementById("risultato").innerHTML =
+            "QR letto: " + decodedText;
+
+          if (ritorno) {
+
+            const url =
+              ritorno +
+              "?stand=" +
+              encodeURIComponent(idStand) +
+              "&qr=" +
+              encodeURIComponent(decodedText);
+
+            window.location.href = url;
+
+          }
+
+        }).catch(function() {
+
+          if (ritorno) {
+
+            const url =
+              ritorno +
+              "?stand=" +
+              encodeURIComponent(idStand) +
+              "&qr=" +
+              encodeURIComponent(decodedText);
+
+            window.location.href = url;
+
+          }
+
+        });
+
+      },
+
+      function(errorMessage) {
+        // Nessun problema: continua a cercare il QR.
+      }
+
+    ).catch(function(error) {
+
+      document.getElementById("risultato").innerHTML =
+        "Impossibile accedere alla fotocamera.<br><br>" +
+        "Controlla di aver consentito l'accesso alla fotocamera.";
+
+    });
+  }
+
+  window.onload = function() {
+    avviaScanner();
+  };
+
+</script>
+
+</body>
+</html>
